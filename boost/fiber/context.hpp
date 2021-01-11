@@ -18,6 +18,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+//#include <utility> // for std::exchange, mac clang sucks
+#include <boost/core/exchange.hpp>
 
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
@@ -255,6 +257,7 @@ public:
     };
 
     static context * active() noexcept;
+    static context** active_pp() noexcept;
 
     static void reset_active() noexcept;
 
@@ -283,6 +286,31 @@ public:
     void resume() noexcept;
     void resume( detail::spinlock_lock &) noexcept;
     void resume( context *) noexcept;
+
+    // resume active context, reduce a tls_get function call for
+    // context_initializer::active_
+    // just called by shedualer::yield(context **)
+    inline void resume(context ** activepp) noexcept {
+        assert(active_pp() == activepp);
+        context* prev = boost::exchange(*activepp, this);
+        std::move(c_).resume_with([this,prev](boost::context::fiber && c) {
+                prev->c_ = std::move( c);
+                this->schedule(prev); // context::active() equals to 'this'
+                return boost::context::fiber{};
+            });
+    }
+
+    // resume 'this' and suspend '*activepp'
+    // reduce tls_get for context_initializer::active_
+    // just called by shedualer::suspend(context **)
+    inline void resume_suspend(context ** activepp) noexcept {
+        assert(active_pp() == activepp);
+        context* prev = boost::exchange(*activepp, this);
+        std::move(c_).resume_with([prev](boost::context::fiber && c) {
+                prev->c_ = std::move( c);
+                return boost::context::fiber{};
+            });
+    }
 
     void suspend() noexcept;
     void suspend( detail::spinlock_lock &) noexcept;

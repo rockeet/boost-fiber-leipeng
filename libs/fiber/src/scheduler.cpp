@@ -10,10 +10,13 @@
 #include <mutex>
 
 #include <boost/assert.hpp>
+#include <boost/align/assume_aligned.hpp>
 
 #include "boost/fiber/algo/round_robin.hpp"
 #include "boost/fiber/context.hpp"
 #include "boost/fiber/exceptions.hpp"
+
+#include <string.h> // for memcpy
 
 #ifdef BOOST_HAS_ABI_HEADERS
 #  include BOOST_ABI_PREFIX
@@ -273,6 +276,44 @@ scheduler::yield( context * ctx) noexcept {
     BOOST_ASSERT( ! ctx->wait_is_linked() );
     // resume another fiber
     algo_->pick_next()->resume( ctx);
+}
+
+void
+scheduler::call_on_main_stack(const std::function<void()>& largeStackFn)
+noexcept {
+    assert(!context::active()->c_);
+    if (BOOST_LIKELY((bool)main_ctx_->c_)) {
+        BOOST_STATIC_ASSERT(sizeof(boost::context::fiber) == sizeof(void*));
+        assert(context::active() != main_ctx_);
+    #if BOOST_OS_WINDOWS && BOOST_ARCH_X86_64
+        static constexpr size_t backup_size = 0x0120;
+    #elif BOOST_ARCH_X86_64
+        static constexpr size_t backup_size = 0x0040;
+    #else
+        static constexpr size_t backup_size = 0x0200; // should be enough
+    #endif
+        unsigned char old_main_stack_top[backup_size];
+        // context::fiber is just a pointer to fiber stack
+        void*  old_main_sp = (void*&)(main_ctx_->c_);
+        memcpy(old_main_stack_top,
+               BOOST_ALIGN_ASSUME_ALIGNED(old_main_sp, sizeof(void*)),
+               sizeof(old_main_stack_top));
+        std::move(main_ctx_->c_).resume_with([&](boost::context::fiber&& prev_c) {
+            largeStackFn();
+            std::move(prev_c).resume_with([this](boost::context::fiber&& main_c) {
+                main_ctx_->c_ = std::move(main_c);
+                return boost::context::fiber{};
+            });
+            return boost::context::fiber{};
+        });
+        memcpy(BOOST_ALIGN_ASSUME_ALIGNED(old_main_sp, sizeof(void*)),
+               old_main_stack_top, sizeof(old_main_stack_top));
+        (void*&)(main_ctx_->c_) = old_main_sp;
+    }
+    else {
+        assert(context::active() == main_ctx_);
+        largeStackFn();
+    }
 }
 
 bool
