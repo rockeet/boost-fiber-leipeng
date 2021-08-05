@@ -2,7 +2,7 @@
 // basic_serial_port.hpp
 // ~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2008 Rep Invariant Systems, Inc. (info@repinvariant.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -22,6 +22,7 @@
   || defined(GENERATING_DOCUMENTATION)
 
 #include <string>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/io_object_impl.hpp>
@@ -30,7 +31,6 @@
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/execution_context.hpp>
-#include <boost/asio/executor.hpp>
 #include <boost/asio/serial_port_base.hpp>
 #if defined(BOOST_ASIO_HAS_IOCP)
 # include <boost/asio/detail/win_iocp_serial_port_service.hpp>
@@ -56,7 +56,7 @@ namespace asio {
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
  */
-template <typename Executor = executor>
+template <typename Executor = any_io_executor>
 class basic_serial_port
   : public serial_port_base
 {
@@ -95,7 +95,7 @@ public:
    * serial port.
    */
   explicit basic_serial_port(const executor_type& ex)
-    : impl_(ex)
+    : impl_(0, ex)
   {
   }
 
@@ -109,11 +109,11 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_serial_port(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value,
-        basic_serial_port
-      >::type* = 0)
-    : impl_(context)
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : impl_(0, 0, context)
   {
   }
 
@@ -130,7 +130,7 @@ public:
    * port.
    */
   basic_serial_port(const executor_type& ex, const char* device)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     boost::system::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), device, ec);
@@ -151,10 +151,10 @@ public:
    */
   template <typename ExecutionContext>
   basic_serial_port(ExecutionContext& context, const char* device,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     boost::system::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), device, ec);
@@ -174,7 +174,7 @@ public:
    * port.
    */
   basic_serial_port(const executor_type& ex, const std::string& device)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     boost::system::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), device, ec);
@@ -195,10 +195,10 @@ public:
    */
   template <typename ExecutionContext>
   basic_serial_port(ExecutionContext& context, const std::string& device,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     boost::system::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), device, ec);
@@ -220,7 +220,7 @@ public:
    */
   basic_serial_port(const executor_type& ex,
       const native_handle_type& native_serial_port)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(),
@@ -244,10 +244,10 @@ public:
   template <typename ExecutionContext>
   basic_serial_port(ExecutionContext& context,
       const native_handle_type& native_serial_port,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(),
@@ -850,8 +850,8 @@ private:
 
       detail::non_const_lvalue<WriteHandler> handler2(handler);
       self_->impl_.get_service().async_write_some(
-          self_->impl_.get_implementation(), buffers, handler2.value,
-          self_->impl_.get_implementation_executor());
+          self_->impl_.get_implementation(), buffers,
+          handler2.value, self_->impl_.get_executor());
     }
 
   private:
@@ -883,8 +883,8 @@ private:
 
       detail::non_const_lvalue<ReadHandler> handler2(handler);
       self_->impl_.get_service().async_read_some(
-          self_->impl_.get_implementation(), buffers, handler2.value,
-          self_->impl_.get_implementation_executor());
+          self_->impl_.get_implementation(), buffers,
+          handler2.value, self_->impl_.get_executor());
     }
 
   private:

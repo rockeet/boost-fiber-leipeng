@@ -5,8 +5,8 @@
 // Copyright (c) 2009-2015 Mateusz Loskot, London, UK.
 // Copyright (c) 2014-2015 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2014, 2015, 2016, 2017, 2018, 2019.
-// Modifications copyright (c) 2014-2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2014-2020.
+// Modifications copyright (c) 2014-2020 Oracle and/or its affiliates.
 
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
@@ -23,10 +23,10 @@
 
 
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 
-#include <boost/range.hpp>
-#include <boost/type_traits/is_base_of.hpp>
+#include <boost/range/size.hpp>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/tags.hpp>
@@ -64,9 +64,11 @@ template
 struct point_point
 {
     template <typename Point1, typename Point2, typename Strategy>
-    static inline bool apply(Point1 const& point1, Point2 const& point2, Strategy const& )
+    static inline bool apply(Point1 const& point1, Point2 const& point2,
+                             Strategy const& strategy)
     {
-        return Strategy::apply(point1, point2);
+        typedef decltype(strategy.relate(point1, point2)) strategy_type;
+        return strategy_type::apply(point1, point2);
     }
 };
 
@@ -107,25 +109,22 @@ struct segment_segment
     static inline bool apply(Segment1 const& segment1, Segment2 const& segment2,
                              Strategy const& strategy)
     {
-        typename Strategy::point_in_point_strategy_type const&
-            pt_pt_strategy = strategy.get_point_in_point_strategy();
-
         return equals::equals_point_point(
                     indexed_point_view<Segment1 const, 0>(segment1),
                     indexed_point_view<Segment2 const, 0>(segment2),
-                    pt_pt_strategy)
+                    strategy)
                 ? equals::equals_point_point(
                     indexed_point_view<Segment1 const, 1>(segment1),
                     indexed_point_view<Segment2 const, 1>(segment2),
-                    pt_pt_strategy)
+                    strategy)
                 : ( equals::equals_point_point(
                         indexed_point_view<Segment1 const, 0>(segment1),
                         indexed_point_view<Segment2 const, 1>(segment2),
-                        pt_pt_strategy)
+                        strategy)
                  && equals::equals_point_point(
                         indexed_point_view<Segment1 const, 1>(segment1),
                         indexed_point_view<Segment2 const, 0>(segment2),
-                        pt_pt_strategy)
+                        strategy)
                   );
     }
 };
@@ -138,15 +137,13 @@ struct area_check
                              Geometry2 const& geometry2,
                              Strategy const& strategy)
     {
-        return geometry::math::equals(
-            geometry::area(geometry1,
-                           strategy.template get_area_strategy<Geometry1>()),
-            geometry::area(geometry2,
-                           strategy.template get_area_strategy<Geometry2>()));
+        return geometry::math::equals(geometry::area(geometry1, strategy),
+                                      geometry::area(geometry2, strategy));
     }
 };
 
 
+/*
 struct length_check
 {
     template <typename Geometry1, typename Geometry2, typename Strategy>
@@ -154,16 +151,14 @@ struct length_check
                              Geometry2 const& geometry2,
                              Strategy const& strategy)
     {
-        return geometry::math::equals(
-            geometry::length(geometry1,
-                             strategy.template get_distance_strategy<Geometry1>()),
-            geometry::length(geometry2,
-                             strategy.template get_distance_strategy<Geometry2>()));
+        return geometry::math::equals(geometry::length(geometry1, strategy),
+                                      geometry::length(geometry2, strategy));
     }
 };
+*/
 
 
-template <typename Geometry1, typename Geometry2, typename IntersectionStrategy>
+template <typename Geometry1, typename Geometry2, typename Strategy>
 struct collected_vector
 {
     typedef typename geometry::select_most_precise
@@ -179,7 +174,7 @@ struct collected_vector
         <
             calculation_type,
             Geometry1,
-            typename IntersectionStrategy::side_strategy_type
+            decltype(std::declval<Strategy>().side())
         > type;
 };
 
@@ -243,14 +238,14 @@ struct equals_by_collection_or_relate
                              Geometry2 const& geometry2,
                              Strategy const& strategy)
     {
-        typedef typename boost::is_base_of
+        typedef std::is_base_of
             <
                 nyi::not_implemented_tag,
                 typename collected_vector
                     <
                         Geometry1, Geometry2, Strategy
                     >::type
-            >::type enable_relate_type;
+            > enable_relate_type;
 
         return apply(geometry1, geometry2, strategy, enable_relate_type());
     }
@@ -260,7 +255,7 @@ private:
     static inline bool apply(Geometry1 const& geometry1,
                              Geometry2 const& geometry2,
                              Strategy const& strategy,
-                             boost::false_type /*enable_relate*/)
+                             std::false_type /*enable_relate*/)
     {
         return equals_by_collection<TrivialCheck>::apply(geometry1, geometry2, strategy);
     }
@@ -269,7 +264,7 @@ private:
     static inline bool apply(Geometry1 const& geometry1,
                              Geometry2 const& geometry2,
                              Strategy const& strategy,
-                             boost::true_type /*enable_relate*/)
+                             std::true_type /*enable_relate*/)
     {
         return equals_by_relate<Geometry1, Geometry2>::apply(geometry1, geometry2, strategy);
     }

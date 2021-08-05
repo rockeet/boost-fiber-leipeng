@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2014-2019 Oracle and/or its affiliates.
+// Copyright (c) 2014-2021 Oracle and/or its affiliates.
 
 // Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
@@ -13,14 +13,12 @@
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_DISTANCE_SEGMENT_TO_BOX_HPP
 
 #include <cstddef>
-
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include <boost/core/ignore_unused.hpp>
-#include <boost/mpl/if.hpp>
 #include <boost/numeric/conversion/cast.hpp>
-#include <boost/type_traits/is_same.hpp>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/assert.hpp>
@@ -50,6 +48,9 @@
 #include <boost/geometry/strategies/distance.hpp>
 #include <boost/geometry/strategies/tags.hpp>
 
+// TEMP - remove when distance umbrella strategies are implemented
+#include <boost/geometry/strategies/relate/services.hpp>
+
 
 namespace boost { namespace geometry
 {
@@ -60,17 +61,20 @@ namespace detail { namespace distance
 {
 
 
-// TODO: Take strategy
-template <typename Segment, typename Box>
-inline bool intersects_segment_box(Segment const& segment, Box const& box)
+template <typename Segment, typename Box, typename Strategy>
+inline bool intersects_segment_box(Segment const& segment, Box const& box,
+                                   Strategy const& strategy)
 {
-    typedef typename strategy::disjoint::services::default_strategy
+    // TODO: pass strategy
+    auto const s = strategies::relate::services::strategy_converter
         <
-            Segment, Box
-        >::type strategy_type;
+            // This is the only strategy defined in distance segment/box
+            // strategies that carries the information about the spheroid
+            // so use it for now.
+            decltype(strategy.get_side_strategy())
+        >::get(strategy.get_side_strategy());
 
-    return ! detail::disjoint::disjoint_segment_box::apply(segment, box,
-                                                           strategy_type());
+    return ! detail::disjoint::disjoint_segment_box::apply(segment, box, s);
 }
 
 
@@ -116,7 +120,7 @@ public:
                                     Strategy const& strategy,
                                     bool check_intersection = true)
     {
-        if (check_intersection && intersects_segment_box(segment, box))
+        if (check_intersection && intersects_segment_box(segment, box, strategy))
         {
             return 0;
         }
@@ -231,7 +235,7 @@ public:
                                     Strategy const& strategy,
                                     bool check_intersection = true)
     {
-        if (check_intersection && intersects_segment_box(segment, box))
+        if (check_intersection && intersects_segment_box(segment, box, strategy))
         {
             return 0;
         }
@@ -771,19 +775,19 @@ public:
         if (detail::equals::equals_point_point(p[0], p[1],
                 sb_strategy.get_equals_point_point_strategy()))
         {
-            typedef typename boost::mpl::if_
+            typedef std::conditional_t
                 <
-                    boost::is_same
+                    std::is_same
                         <
                             ps_comparable_strategy,
                             SBStrategy
-                        >,
+                        >::value,
                     typename strategy::distance::services::comparable_type
                         <
                             typename SBStrategy::distance_pb_strategy::type
                         >::type,
                     typename SBStrategy::distance_pb_strategy::type
-                >::type point_box_strategy_type;
+                > point_box_strategy_type;
 
             return dispatch::distance
                 <

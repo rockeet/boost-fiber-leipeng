@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2020 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2020-2021 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Jan 2020
 
 
@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef BOOST_OUTCOME_SYSTEM_ERROR2_GETADDRINFO_CODE_HPP
 #define BOOST_OUTCOME_SYSTEM_ERROR2_GETADDRINFO_CODE_HPP
 
-#include "generic_code.hpp"
+#include "quick_status_code_from_enum.hpp"
 
 #ifdef _WIN32
 #error Not available for Microsoft Windows

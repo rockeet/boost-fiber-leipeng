@@ -24,11 +24,15 @@
 
 #include <boost/current_function.hpp>
 #include <boost/config.hpp>
+#include <exception>
 #include <iostream>
 #include <iterator>
+#include <string>
 #include <cstdlib>
 #include <cstring>
 #include <cstddef>
+#include <cctype>
+#include <cstdio>
 
 #if defined(_MSC_VER) && defined(_CPPLIB_VER) && defined(_DEBUG)
 # include <crtdbg.h>
@@ -118,11 +122,27 @@ inline void error_impl(char const * msg, char const * file, int line, char const
     ++test_results().errors();
 }
 
-inline void throw_failed_impl(char const * excep, char const * file, int line, char const * function)
+inline void throw_failed_impl(const char* expr, char const * excep, char const * file, int line, char const * function)
 {
    BOOST_LIGHTWEIGHT_TEST_OSTREAM
-    << file << "(" << line << "): Exception '" << excep << "' not thrown in function '"
+    << file << "(" << line << "): expression '" << expr << "' did not throw exception '" << excep << "' in function '"
     << function << "'" << std::endl;
+   ++test_results().errors();
+}
+
+inline void no_throw_failed_impl(const char* expr, const char* file, int line, const char* function)
+{
+    BOOST_LIGHTWEIGHT_TEST_OSTREAM
+        << file << "(" << line << "): expression '" << expr << "' threw an exception in function '"
+        << function << "'" << std::endl;
+   ++test_results().errors();
+}
+
+inline void no_throw_failed_impl(const char* expr, const char* what, const char* file, int line, const char* function)
+{
+    BOOST_LIGHTWEIGHT_TEST_OSTREAM
+        << file << "(" << line << "): expression '" << expr << "' threw an exception in function '"
+        << function << "': " << what << std::endl;
    ++test_results().errors();
 }
 
@@ -156,41 +176,121 @@ template<class T> inline const void* test_output_impl(T volatile* v) { return co
 inline const void* test_output_impl(std::nullptr_t) { return nullptr; }
 #endif
 
-struct lw_test_eq {
+// print chars as numeric
+
+inline int test_output_impl( signed char const& v ) { return v; }
+inline unsigned test_output_impl( unsigned char const& v ) { return v; }
+
+inline unsigned long test_output_impl( wchar_t const& v ) { return v; }
+
+#if !defined( BOOST_NO_CXX11_CHAR16_T )
+inline unsigned long test_output_impl( char16_t const& v ) { return v; }
+#endif
+
+#if !defined( BOOST_NO_CXX11_CHAR32_T )
+inline unsigned long test_output_impl( char32_t const& v ) { return v; }
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+inline std::string test_output_impl( char const& v )
+{
+    if( std::isprint( static_cast<unsigned char>( v ) ) )
+    {
+        return std::string( 1, v );
+    }
+    else
+    {
+        char buffer[ 8 ];
+        std::sprintf( buffer, "\\x%02X", static_cast<unsigned char>( v ) );
+
+        return buffer;
+    }
+}
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
+// predicates
+
+struct lw_test_eq
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t == u; }
-    static const char* op() { return "=="; }
 };
 
-struct lw_test_ne {
+struct lw_test_ne
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t != u; }
-    static const char* op() { return "!="; }
 };
 
-struct lw_test_lt {
+struct lw_test_lt
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t < u; }
-    static const char* op() { return "<"; }
 };
 
-struct lw_test_le {
+struct lw_test_le
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t <= u; }
-    static const char* op() { return "<="; }
 };
 
-struct lw_test_gt {
+struct lw_test_gt
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t > u; }
-    static const char* op() { return ">"; }
 };
 
-struct lw_test_ge {
+struct lw_test_ge
+{
     template <typename T, typename U>
     bool operator()(const T& t, const U& u) const { return t >= u; }
-    static const char* op() { return ">="; }
 };
+
+// lwt_predicate_name
+
+template<class T> char const * lwt_predicate_name( T const& )
+{
+    return "~=";
+}
+
+inline char const * lwt_predicate_name( lw_test_eq const& )
+{
+    return "==";
+}
+
+inline char const * lwt_predicate_name( lw_test_ne const& )
+{
+    return "!=";
+}
+
+inline char const * lwt_predicate_name( lw_test_lt const& )
+{
+    return "<";
+}
+
+inline char const * lwt_predicate_name( lw_test_le const& )
+{
+    return "<=";
+}
+
+inline char const * lwt_predicate_name( lw_test_gt const& )
+{
+    return ">";
+}
+
+inline char const * lwt_predicate_name( lw_test_ge const& )
+{
+    return ">=";
+}
+
+//
 
 template<class BinaryPredicate, class T, class U>
 inline bool test_with_impl(BinaryPredicate pred, char const * expr1, char const * expr2,
@@ -205,8 +305,8 @@ inline bool test_with_impl(BinaryPredicate pred, char const * expr1, char const 
     else
     {
         BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " " << pred.op() << " " << expr2
-            << "' ('" << test_output_impl(t) << "' " << pred.op() << " '" << test_output_impl(u)
+            << file << "(" << line << "): test '" << expr1 << " " << lwt_predicate_name(pred) << " " << expr2
+            << "' ('" << test_output_impl(t) << "' " << lwt_predicate_name(pred) << " '" << test_output_impl(u)
             << "') failed in function '" << function << "'" << std::endl;
         ++test_results().errors();
         return false;
@@ -431,6 +531,8 @@ inline int report_errors()
 
 #define BOOST_ERROR(msg) ( ::boost::detail::error_impl(msg, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION) )
 
+#define BOOST_TEST_WITH(expr1,expr2,predicate) ( ::boost::detail::test_with_impl(predicate, #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+
 #define BOOST_TEST_EQ(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_eq(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
 #define BOOST_TEST_NE(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_ne(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
 
@@ -446,22 +548,38 @@ inline int report_errors()
 #define BOOST_TEST_ALL_WITH(begin1, end1, begin2, end2, predicate) ( ::boost::detail::test_all_with_impl(BOOST_LIGHTWEIGHT_TEST_OSTREAM, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, begin1, end1, begin2, end2, predicate) )
 
 #ifndef BOOST_NO_EXCEPTIONS
-   #define BOOST_TEST_THROWS( EXPR, EXCEP )                    \
-      try {                                                    \
-         EXPR;                                                 \
-         ::boost::detail::throw_failed_impl                    \
-         (#EXCEP, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
-      }                                                        \
-      catch(EXCEP const&) {                                    \
-         ::boost::detail::test_results();                      \
-      }                                                        \
-      catch(...) {                                             \
-         ::boost::detail::throw_failed_impl                    \
-         (#EXCEP, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
-      }                                                        \
+   #define BOOST_TEST_THROWS( EXPR, EXCEP )                           \
+      try {                                                           \
+         EXPR;                                                        \
+         ::boost::detail::throw_failed_impl                           \
+         (#EXPR, #EXCEP, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
+      }                                                               \
+      catch(EXCEP const&) {                                           \
+         ::boost::detail::test_results();                             \
+      }                                                               \
+      catch(...) {                                                    \
+         ::boost::detail::throw_failed_impl                           \
+         (#EXPR, #EXCEP, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
+      }                                                               \
    //
 #else
    #define BOOST_TEST_THROWS( EXPR, EXCEP )
+#endif
+
+#ifndef BOOST_NO_EXCEPTIONS
+#  define BOOST_TEST_NO_THROW(EXPR)                                    \
+    try {                                                              \
+        EXPR;                                                          \
+    } catch (const std::exception& e) {                                \
+        ::boost::detail::no_throw_failed_impl                          \
+        (#EXPR, e.what(), __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
+    } catch (...) {                                                    \
+        ::boost::detail::no_throw_failed_impl                          \
+        (#EXPR, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION);           \
+    }
+    //
+#else
+#  define BOOST_TEST_NO_THROW(EXPR) { EXPR; }
 #endif
 
 #endif // #ifndef BOOST_CORE_LIGHTWEIGHT_TEST_HPP

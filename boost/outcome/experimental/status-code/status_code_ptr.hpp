@@ -1,5 +1,5 @@
 /* Pointer to a SG14 status_code
-(C) 2018-2020 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018-2021 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Sep 2018
 
 
@@ -103,7 +103,7 @@ namespace detail
 #endif
     virtual void _do_erased_copy(status_code<void> &dst, const status_code<void> &src, size_t /*unused*/) const override  // NOLINT
     {
-      assert(dst.domain() == *this);
+      // Note that dst will not have its domain set
       assert(src.domain() == *this);
       auto &d = static_cast<_mycode &>(dst);               // NOLINT
       const auto &_s = static_cast<const _mycode &>(src);  // NOLINT

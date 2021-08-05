@@ -3,8 +3,8 @@
 // Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 // Copyright (c) 2013-2017 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2013, 2014, 2016, 2017, 2018, 2019.
-// Modifications copyright (c) 2013-2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2013-2020.
+// Modifications copyright (c) 2013-2020 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
@@ -26,6 +26,8 @@
 #include <boost/geometry/util/math.hpp>
 #include <boost/geometry/util/select_calculation_type.hpp>
 #include <boost/geometry/util/normalize_spheroidal_coordinates.hpp>
+
+#include <boost/geometry/strategy/spherical/expand_point.hpp>
 
 #include <boost/geometry/strategies/cartesian/point_in_box.hpp>
 #include <boost/geometry/strategies/covered_by.hpp>
@@ -555,27 +557,13 @@ namespace services
 template <typename PointLike, typename Geometry, typename AnyTag1, typename AnyTag2>
 struct default_strategy<PointLike, Geometry, AnyTag1, AnyTag2, pointlike_tag, polygonal_tag, spherical_tag, spherical_tag>
 {
-    typedef within::detail::spherical_winding_base
-        <
-            typename strategy::side::services::default_strategy
-                <
-                    typename cs_tag<PointLike>::type
-                >::type,
-            void
-        > type;
+    typedef within::spherical_winding<> type;
 };
 
 template <typename PointLike, typename Geometry, typename AnyTag1, typename AnyTag2>
 struct default_strategy<PointLike, Geometry, AnyTag1, AnyTag2, pointlike_tag, linear_tag, spherical_tag, spherical_tag>
 {
-    typedef within::detail::spherical_winding_base
-        <
-            typename strategy::side::services::default_strategy
-                <
-                    typename cs_tag<PointLike>::type
-                >::type,
-            void
-        > type;
+    typedef within::spherical_winding<> type;
 };
 
 } // namespace services
@@ -593,27 +581,13 @@ namespace strategy { namespace covered_by { namespace services
 template <typename PointLike, typename Geometry, typename AnyTag1, typename AnyTag2>
 struct default_strategy<PointLike, Geometry, AnyTag1, AnyTag2, pointlike_tag, polygonal_tag, spherical_tag, spherical_tag>
 {
-    typedef within::detail::spherical_winding_base
-        <
-            typename strategy::side::services::default_strategy
-                <
-                    typename cs_tag<PointLike>::type
-                >::type,
-            void
-        > type;
+    typedef within::spherical_winding<> type;
 };
 
 template <typename PointLike, typename Geometry, typename AnyTag1, typename AnyTag2>
 struct default_strategy<PointLike, Geometry, AnyTag1, AnyTag2, pointlike_tag, linear_tag, spherical_tag, spherical_tag>
 {
-    typedef within::detail::spherical_winding_base
-        <
-            typename strategy::side::services::default_strategy
-                <
-                    typename cs_tag<PointLike>::type
-                >::type,
-            void
-        > type;
+    typedef within::spherical_winding<> type;
 };
 
 }}} // namespace strategy::covered_by::services

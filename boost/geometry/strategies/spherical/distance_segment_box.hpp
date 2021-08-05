@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2018-2019 Oracle and/or its affiliates.
+// Copyright (c) 2018-2020 Oracle and/or its affiliates.
 // Contributed and/or modified by Vissarion Fisikopoulos, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
@@ -11,12 +11,15 @@
 #ifndef BOOST_GEOMETRY_STRATEGIES_SPHERICAL_DISTANCE_SEGMENT_BOX_HPP
 #define BOOST_GEOMETRY_STRATEGIES_SPHERICAL_DISTANCE_SEGMENT_BOX_HPP
 
+#include <type_traits>
+
 #include <boost/geometry/algorithms/detail/distance/segment_to_box.hpp>
 
 #include <boost/geometry/strategies/distance.hpp>
 #include <boost/geometry/strategies/normalize.hpp>
 #include <boost/geometry/strategies/spherical/disjoint_box_box.hpp>
 #include <boost/geometry/strategies/spherical/distance_cross_track.hpp>
+#include <boost/geometry/strategies/spherical/distance_cross_track_point_box.hpp>
 #include <boost/geometry/strategies/spherical/point_in_point.hpp>
 #include <boost/geometry/strategies/cartesian/point_in_box.hpp> // spherical
 #include <boost/geometry/strategies/spherical/ssf.hpp>
@@ -61,20 +64,20 @@ struct generic_segment_box
         typename LessEqual::other less_equal;
         typedef geometry::model::segment<SegmentPoint> segment_type;
         // if cs_tag is spherical_tag check segment's cs_tag with spherical_equatorial_tag as default
-        typedef typename boost::mpl::if_c
+        typedef std::conditional_t
             <
-                boost::is_same<typename SegmentBoxStrategy::cs_tag, spherical_tag>::value,
-                typename boost::mpl::if_c
+                std::is_same<typename SegmentBoxStrategy::cs_tag, spherical_tag>::value,
+                std::conditional_t
                     <
-                        boost::is_same
+                        std::is_same
                             <
                                 typename geometry::cs_tag<segment_type>::type,
                                 spherical_polar_tag
                             >::value,
                         spherical_polar_tag, spherical_equatorial_tag
-                    >::type,
+                    >,
                 typename SegmentBoxStrategy::cs_tag
-            >::type cs_tag;
+            > cs_tag;
         typedef geometry::detail::disjoint::
                 disjoint_segment_box_sphere_or_spheroid<cs_tag>
                 disjoint_sb;
@@ -153,15 +156,15 @@ struct generic_segment_box
         else
         {
             result = geometry::detail::distance::segment_to_box_2D
-                    <
-                        ReturnType,
-                        SegmentPoint,
-                        BoxPoint,
-                        SegmentBoxStrategy
-                    >::template call_above_of_box
-                    <
-                    typename LessEqual::other
-                    >(p1, p0, p_max, bottom_right, sb_strategy);
+                        <
+                            ReturnType,
+                            SegmentPoint,
+                            BoxPoint,
+                            SegmentBoxStrategy
+                        >::template call_above_of_box
+                            <
+                                typename LessEqual::other
+                            >(p1, p0, p_max, bottom_right, sb_strategy);
         }
         return result;
     }
@@ -221,9 +224,9 @@ struct spherical_segment_box
         typedef Strategy type;
     };
 
-    inline typename distance_pp_strategy::type get_distance_pp_strategy() const
+    inline Strategy get_distance_pp_strategy() const
     {
-        return typename distance_pp_strategy::type();
+        return m_strategy;
     }
     // point-segment strategy getters
     struct distance_ps_strategy
@@ -233,7 +236,7 @@ struct spherical_segment_box
 
     inline typename distance_ps_strategy::type get_distance_ps_strategy() const
     {
-        return typename distance_ps_strategy::type();
+        return typename distance_ps_strategy::type(m_strategy.radius());
     }
 
     struct distance_pb_strategy
@@ -243,7 +246,7 @@ struct spherical_segment_box
 
     inline typename distance_pb_strategy::type get_distance_pb_strategy() const
     {
-        return typename distance_pb_strategy::type();
+        return typename distance_pb_strategy::type(m_strategy.radius());
     }
 
     // TODO: why is the Radius not propagated above?
@@ -261,6 +264,19 @@ struct spherical_segment_box
     {
         return equals_point_point_strategy_type();
     }
+
+    // constructors
+
+    inline spherical_segment_box()
+    {}
+
+    explicit inline spherical_segment_box(typename Strategy::radius_type const& r)
+        : m_strategy(r)
+    {}
+
+    inline spherical_segment_box(Strategy const& s)
+        : m_strategy(s)
+    {}
 
     // methods
 
@@ -306,6 +322,8 @@ struct spherical_segment_box
                                    top_left, top_right);
     }
 
+private:
+    Strategy m_strategy;
 };
 
 #ifndef DOXYGEN_NO_STRATEGY_SPECIALIZATIONS

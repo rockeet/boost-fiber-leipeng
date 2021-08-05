@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2014-2019, Oracle and/or its affiliates.
+// Copyright (c) 2014-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
@@ -14,7 +14,11 @@
 #include <algorithm>
 #include <deque>
 
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/empty.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/size.hpp>
+#include <boost/range/value_type.hpp>
 
 #include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/closure.hpp>
@@ -217,8 +221,7 @@ inline bool has_self_intersections(Linear const& linear, Strategy const& strateg
 
     typedef is_acceptable_turn
         <
-            Linear,
-            typename Strategy::equals_point_point_strategy_type
+            Linear, Strategy
         > is_acceptable_turn_type;
 
     is_acceptable_turn_type predicate(linear);
@@ -255,12 +258,12 @@ struct is_simple_linestring
         return ! boost::empty(linestring)
             && ! detail::is_valid::has_duplicates
                     <
-                        Linestring, closed, typename Strategy::cs_tag
-                    >::apply(linestring, policy)
+                        Linestring, closed
+                    >::apply(linestring, policy, strategy)
             && ! detail::is_valid::has_spikes
                     <
                         Linestring, closed
-                    >::apply(linestring, policy, strategy.get_side_strategy());
+                    >::apply(linestring, policy, strategy);
     }
 };
 

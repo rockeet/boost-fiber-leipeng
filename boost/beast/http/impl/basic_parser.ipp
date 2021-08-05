@@ -82,7 +82,17 @@ basic_parser<isRequest>::
 put(net::const_buffer buffer,
     error_code& ec)
 {
-    BOOST_ASSERT(state_ != state::complete);
+    // If this goes off you have tried to parse more data after the parser
+    // has completed. A common cause of this is re-using a parser, which is
+    // not supported. If you need to re-use a parser, consider storing it
+    // in an optional. Then reset() and emplace() prior to parsing each new
+    // message.
+    BOOST_ASSERT(!is_done());
+    if (is_done())
+    {
+        ec = error::stale_parser;
+        return 0;
+    }
     auto p = static_cast<char const*>(buffer.data());
     auto n = buffer.size();
     auto const p0 = p;
@@ -154,6 +164,8 @@ loop:
             goto done;
         }
         finish_header(ec, is_request{});
+        if(ec)
+            goto done;
         break;
 
     case state::body0:
@@ -447,7 +459,8 @@ finish_header(error_code& ec, std::true_type)
     }
     else if(f_ & flagContentLength)
     {
-        if(len_ > body_limit_)
+        if(body_limit_.has_value() &&
+           len_ > body_limit_)
         {
             ec = error::body_limit;
             return;
@@ -511,7 +524,8 @@ finish_header(error_code& ec, std::false_type)
             f_ |= flagHasBody;
             state_ = state::body0;
 
-            if(len_ > body_limit_)
+            if(body_limit_.has_value() &&
+               len_ > body_limit_)
             {
                 ec = error::body_limit;
                 return;
@@ -573,12 +587,15 @@ basic_parser<isRequest>::
 parse_body_to_eof(char const*& p,
     std::size_t n, error_code& ec)
 {
-    if(n > body_limit_)
+    if(body_limit_.has_value())
     {
-        ec = error::body_limit;
-        return;
+        if (n > *body_limit_)
+        {
+            ec = error::body_limit;
+            return;
+        }
+        *body_limit_ -= n;
     }
-    body_limit_ = body_limit_ - n;
     ec = {};
     n = this->on_body_impl(string_view{p, n}, ec);
     p += n;
@@ -648,12 +665,15 @@ parse_chunk_header(char const*& p0,
         }
         if(size != 0)
         {
-            if(size > body_limit_)
+            if (body_limit_.has_value())
             {
-                ec = error::body_limit;
-                return;
+                if (size > *body_limit_)
+                {
+                    ec = error::body_limit;
+                    return;
+                }
+                *body_limit_ -= size;
             }
-            body_limit_ -= size;
             auto const start = p;
             parse_chunk_extensions(p, pend, ec);
             if(ec)

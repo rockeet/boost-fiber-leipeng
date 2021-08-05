@@ -1,9 +1,9 @@
 # Boost.Nowide
 
-Branch      | Travis | Appveyor | Github | codecov.io | Documentation
-------------|--------|----------|--------|------------|--------------
-[master](https://github.com/boostorg/nowide/tree/master)   | [![Build Status](https://travis-ci.com/boostorg/nowide.svg?branch=master)](https://travis-ci.com/boostorg/nowide)  | [![Build status](https://ci.appveyor.com/api/projects/status/w5sywrekwd66say4/branch/master?svg=true)](https://ci.appveyor.com/project/Flamefire/nowide-fr98b/branch/master)   | ![](https://github.com/boostorg/nowide/workflows/CI%20Tests/badge.svg?branch=master)  | [![codecov](https://codecov.io/gh/boostorg/nowide/branch/master/graph/badge.svg)](https://codecov.io/gh/boostorg/nowide/branch/master)   | [![Documentation](https://img.shields.io/badge/documentation-master-brightgreen.svg)](https://www.boost.org/doc/libs/master/libs/nowide/index.html)
-[develop](https://github.com/boostorg/nowide/tree/develop) | [![Build Status](https://travis-ci.com/boostorg/nowide.svg?branch=develop)](https://travis-ci.com/boostorg/nowide) | [![Build status](https://ci.appveyor.com/api/projects/status/w5sywrekwd66say4/branch/develop?svg=true)](https://ci.appveyor.com/project/Flamefire/nowide-fr98b/branch/develop) | ![](https://github.com/boostorg/nowide/workflows/CI%20Tests/badge.svg?branch=develop) | [![codecov](https://codecov.io/gh/boostorg/nowide/branch/develop/graph/badge.svg)](https://codecov.io/gh/boostorg/nowide/branch/develop) | [![Documentation](https://img.shields.io/badge/documentation-develop-brightgreen.svg)](https://www.boost.org/doc/libs/develop/libs/nowide/index.html)
+Branch      | Appveyor | Github | codecov.io | Documentation
+------------|----------|--------|------------|--------------
+[master](https://github.com/boostorg/nowide/tree/master)   | [![Build status](https://ci.appveyor.com/api/projects/status/w5sywrekwd66say4/branch/master?svg=true)](https://ci.appveyor.com/project/Flamefire/nowide-fr98b/branch/master)   | ![](https://github.com/boostorg/nowide/workflows/CI%20Tests/badge.svg?branch=master) ![](https://github.com/boostorg/nowide/workflows/POSIX/badge.svg?branch=master)  | [![codecov](https://codecov.io/gh/boostorg/nowide/branch/master/graph/badge.svg)](https://codecov.io/gh/boostorg/nowide/branch/master)   | [![Documentation](https://img.shields.io/badge/documentation-master-brightgreen.svg)](https://www.boost.org/doc/libs/master/libs/nowide/index.html)
+[develop](https://github.com/boostorg/nowide/tree/develop) | [![Build status](https://ci.appveyor.com/api/projects/status/w5sywrekwd66say4/branch/develop?svg=true)](https://ci.appveyor.com/project/Flamefire/nowide-fr98b/branch/develop) | ![](https://github.com/boostorg/nowide/workflows/CI%20Tests/badge.svg?branch=develop) ![](https://github.com/boostorg/nowide/workflows/POSIX/badge.svg?branch=develop) | [![codecov](https://codecov.io/gh/boostorg/nowide/branch/develop/graph/badge.svg)](https://codecov.io/gh/boostorg/nowide/branch/develop) | [![Documentation](https://img.shields.io/badge/documentation-develop-brightgreen.svg)](https://www.boost.org/doc/libs/develop/libs/nowide/index.html)
 
 Coverity Scan: [![Coverity Scan Build Status](https://scan.coverity.com/projects/20464/badge.svg)](https://scan.coverity.com/projects/boostorg-nowide)
 
@@ -17,9 +17,32 @@ Distributed under the [Boost Software License, Version 1.0](http://www.boost.org
 
 ### Properties
 
-* C++03 **(will be raised to C++11 by mid 2020)**
-* optional C++11/17 support
+* optional C++17 (filesystem) support
 * Usable outside of Boost via CMake
+* Compiled library on every OS
+
+Note on the last point:
+Having a compiled library allows cross-platform access to e.g. `setenv` which would not be available when using a `-std=c++nn` flag.
+This is different to the version available prior to the inclusion in Boost.
+
+### Requirements (All versions)
+
+* C++11 (or higher) compatible compiler
+    * MSVC 2015 and up work
+    * libstdc++ < 5 is unsupported as it is silently lacking C++11 features
+
+### Requirements (Boost version)
+
+* Boost (>= 1.56)
+* CMake (when not using as part of Boost) or B2 (otherwise)
+
+### Requirements (Standalone version)
+
+The [standalone branch](https://github.com/boostorg/nowide/tree/standalone) keeps track of the [develop branch](https://github.com/boostorg/nowide/tree/develop) and can be used without any other part of Boost.
+It is automatically updated so referring to a specific commit is recommended.
+You can also use the standalone source archive which is part of every release.
+
+* CMake
 
 # Quickstart
 

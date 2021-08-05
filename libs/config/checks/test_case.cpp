@@ -1,4 +1,4 @@
-//  This file was automatically generated on Mon Dec 09 09:47:38 2019
+//  This file was automatically generated on Wed Mar  3 12:23:03 2021
 //  by libs/config/tools/generate.cpp
 //  Copyright John Maddock 2002-4.
 //  Use, modification and distribution are subject to the 
@@ -276,6 +276,16 @@
 #     error "Defect macro BOOST_NO_CWCTYPE is defined."
 #  endif
 #endif
+#ifdef TEST_BOOST_NO_CXX03
+#  ifdef BOOST_NO_CXX03
+#     error "Defect macro BOOST_NO_CXX03 is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX11
+#  ifdef BOOST_NO_CXX11
+#     error "Defect macro BOOST_NO_CXX11 is defined."
+#  endif
+#endif
 #ifdef TEST_BOOST_NO_CXX11_ADDRESSOF
 #  ifdef BOOST_NO_CXX11_ADDRESSOF
 #     error "Defect macro BOOST_NO_CXX11_ADDRESSOF is defined."
@@ -421,6 +431,11 @@
 #     error "Defect macro BOOST_NO_CXX11_NUMERIC_LIMITS is defined."
 #  endif
 #endif
+#ifdef TEST_BOOST_NO_CXX11_OVERRIDE
+#  ifdef BOOST_NO_CXX11_OVERRIDE
+#     error "Defect macro BOOST_NO_CXX11_OVERRIDE is defined."
+#  endif
+#endif
 #ifdef TEST_BOOST_NO_CXX11_POINTER_TRAITS
 #  ifdef BOOST_NO_CXX11_POINTER_TRAITS
 #     error "Defect macro BOOST_NO_CXX11_POINTER_TRAITS is defined."
@@ -456,9 +471,19 @@
 #     error "Defect macro BOOST_NO_CXX11_TRAILING_RESULT_TYPES is defined."
 #  endif
 #endif
+#ifdef TEST_BOOST_NO_CXX11_UNRESTRICTED_UNION
+#  ifdef BOOST_NO_CXX11_UNRESTRICTED_UNION
+#     error "Defect macro BOOST_NO_CXX11_UNRESTRICTED_UNION is defined."
+#  endif
+#endif
 #ifdef TEST_BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #  ifdef BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #     error "Defect macro BOOST_NO_CXX11_USER_DEFINED_LITERALS is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX14
+#  ifdef BOOST_NO_CXX14
+#     error "Defect macro BOOST_NO_CXX14 is defined."
 #  endif
 #endif
 #ifdef TEST_BOOST_NO_CXX14_BINARY_LITERALS
@@ -516,9 +541,39 @@
 #     error "Defect macro BOOST_NO_CXX14_VARIABLE_TEMPLATES is defined."
 #  endif
 #endif
+#ifdef TEST_BOOST_NO_CXX17
+#  ifdef BOOST_NO_CXX17
+#     error "Defect macro BOOST_NO_CXX17 is defined."
+#  endif
+#endif
 #ifdef TEST_BOOST_NO_CXX17_FOLD_EXPRESSIONS
 #  ifdef BOOST_NO_CXX17_FOLD_EXPRESSIONS
 #     error "Defect macro BOOST_NO_CXX17_FOLD_EXPRESSIONS is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_HDR_ANY
+#  ifdef BOOST_NO_CXX17_HDR_ANY
+#     error "Defect macro BOOST_NO_CXX17_HDR_ANY is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_HDR_CHARCONV
+#  ifdef BOOST_NO_CXX17_HDR_CHARCONV
+#     error "Defect macro BOOST_NO_CXX17_HDR_CHARCONV is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_HDR_EXECUTION
+#  ifdef BOOST_NO_CXX17_HDR_EXECUTION
+#     error "Defect macro BOOST_NO_CXX17_HDR_EXECUTION is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_HDR_FILESYSTEM
+#  ifdef BOOST_NO_CXX17_HDR_FILESYSTEM
+#     error "Defect macro BOOST_NO_CXX17_HDR_FILESYSTEM is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+#  ifdef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+#     error "Defect macro BOOST_NO_CXX17_HDR_MEMORY_RESOURCE is defined."
 #  endif
 #endif
 #ifdef TEST_BOOST_NO_CXX17_HDR_OPTIONAL
@@ -964,11 +1019,6 @@
 #ifdef TEST_BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX
 #  ifdef BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX
 #     error "Defect macro BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX is defined."
-#  endif
-#endif
-#ifdef TEST_BOOST_NO_CXX11_UNRESTRICTED_UNION
-#  ifdef BOOST_NO_CXX11_UNRESTRICTED_UNION
-#     error "Defect macro BOOST_NO_CXX11_UNRESTRICTED_UNION is defined."
 #  endif
 #endif
 #ifdef TEST_BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL

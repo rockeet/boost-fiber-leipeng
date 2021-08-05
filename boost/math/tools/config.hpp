@@ -28,12 +28,12 @@
 
 #include <boost/math/tools/user.hpp>
 
-#if (defined(__CYGWIN__) || defined(__FreeBSD__) || defined(__NetBSD__) \
+#if (defined(__CYGWIN__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__EMSCRIPTEN__)\
    || (defined(__hppa) && !defined(__OpenBSD__)) || (defined(__NO_LONG_DOUBLE_MATH) && (DBL_MANT_DIG != LDBL_MANT_DIG))) \
    && !defined(BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS)
 #  define BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
 #endif
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x582))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x582))
 //
 // Borland post 5.8.2 uses Dinkumware's std C lib which
 // doesn't have true long double precision.  Earlier
@@ -67,6 +67,13 @@
 //
 // Darwin's rather strange "double double" is rather hard to
 // support, it should be possible given enough effort though...
+//
+#  define BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
+#endif
+#if !defined(BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS) && (LDBL_MANT_DIG == 106) && (LDBL_MIN_EXP > DBL_MIN_EXP)
+//
+// Generic catch all case for gcc's "double-double" long double type.
+// We do not support this as it's not even remotely IEEE conforming:
 //
 #  define BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
 #endif
@@ -470,6 +477,14 @@ namespace boost{ namespace math{
 #else
 #  define BOOST_MATH_THREAD_LOCAL
 #endif
+//
+// Some mingw flavours have issues with thread_local and types with non-trivial destructors
+// See https://sourceforge.net/p/mingw-w64/bugs/527/
+//
+#if !defined(BOOST_NO_CXX11_THREAD_LOCAL) && (defined(__MINGW32__) || defined(__MINGW64__)) && !defined(_REENTRANT) && !defined(__clang__)
+#  define BOOST_MATH_NO_THREAD_LOCAL_WITH_NON_TRIVIAL_TYPES
+#endif
+
 
 //
 // Can we have constexpr tables?
