@@ -31,7 +31,19 @@ fibers::fiber::id get_id() noexcept {
 
 inline
 void yield() noexcept {
-    fibers::context::active()->yield();
+    // fibers::context::active()->yield();
+    // active()->yield() implementation:
+    //
+    // context::yield() noexcept {
+    //    get_scheduler()->yield( context::active() );
+    // }
+    //
+    // -------------------------------------------------------
+    // context::active() will access TLS, which is slow
+    // ---- improve to reduce a call to context::active() ----
+    //
+    auto active = fibers::context::active();
+    active->get_scheduler()->yield(active);
 }
 
 template< typename Clock, typename Duration >

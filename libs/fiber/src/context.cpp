@@ -25,6 +25,13 @@ public:
     main_context() noexcept :
         context{ 1, type::main_context, launch::post } {
     }
+    ~main_context() {
+        for ( fss_data_t::value_type & data : fss_data_) {
+            if (data.second.vp && data.second.cleanup_function)
+                data.second.do_cleanup();
+        }
+        fss_data_.clear();
+    }
 };
 
 class dispatcher_context final : public context {
@@ -102,9 +109,14 @@ thread_local std::size_t context_initializer::counter_{ 0 };
 
 context *
 context::active() noexcept {
+    return *active_pp();
+}
+
+context**
+context::active_pp() noexcept {
     // initialized the first time control passes; per thread
     thread_local static context_initializer ctx_initializer;
-    return context_initializer::active_;
+    return &context_initializer::active_;
 }
 
 void
@@ -164,9 +176,10 @@ context::resume( context * ready_ctx) noexcept {
     // prev will point to previous active context
     std::swap( context_initializer::active_, prev);
     // pass pointer to the context that resumes `this`
-    std::move( c_).resume_with([prev,ready_ctx](boost::context::fiber && c){
+    std::move( c_).resume_with([this,prev,ready_ctx](boost::context::fiber && c){
                 prev->c_ = std::move( c);
-                context::active()->schedule( ready_ctx);
+                // context::active()->schedule( ready_ctx);
+                this->schedule( ready_ctx); // context::active() equals to 'this'
                 return boost::context::fiber{};
             });
 }
