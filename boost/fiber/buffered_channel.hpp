@@ -50,7 +50,7 @@ private:
     bool                                                closed_{ false };
 
 	bool is_full_() const noexcept {
-		return cidx_ == ((pidx_ + 1) % capacity_);
+		return cidx_ == ((pidx_ + 1) & (capacity_ - 1));
 	}
 
 	bool is_empty_() const noexcept {
@@ -64,7 +64,7 @@ private:
 public:
     explicit buffered_channel( std::size_t capacity) :
             capacity_{ capacity } {
-        if ( BOOST_UNLIKELY( 2 > capacity_ || 0 != ( capacity_ & (capacity_ - 1) ) ) ) { 
+        if ( BOOST_UNLIKELY( 2 > capacity_ || 0 != ( capacity_ & (capacity_ - 1) ) ) ) {
             throw fiber_error{ std::make_error_code( std::errc::invalid_argument),
                                "boost fiber: buffer capacity is invalid" };
         }
@@ -130,7 +130,7 @@ public:
             return channel_op_status::full;
         }
         slots_[pidx_] = value;
-        pidx_ = (pidx_ + 1) % capacity_;
+        pidx_ = (pidx_ + 1) & (capacity_ - 1);
         // notify one waiting consumer
         while ( ! waiting_consumers_.empty() ) {
             context * consumer_ctx = & waiting_consumers_.front();
@@ -163,7 +163,7 @@ public:
             return channel_op_status::full;
         }
         slots_[pidx_] = std::move( value);
-        pidx_ = (pidx_ + 1) % capacity_;
+        pidx_ = (pidx_ + 1) & (capacity_ - 1);
         // notify one waiting consumer
         while ( ! waiting_consumers_.empty() ) {
             context * consumer_ctx = & waiting_consumers_.front();
@@ -200,7 +200,7 @@ public:
                 active_ctx->suspend( lk);
             } else {
                 slots_[pidx_] = value;
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 // notify one waiting consumer
                 while ( ! waiting_consumers_.empty() ) {
                     context * consumer_ctx = & waiting_consumers_.front();
@@ -239,7 +239,7 @@ public:
                 active_ctx->suspend( lk);
             } else {
                 slots_[pidx_] = std::move( value);
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 // notify one waiting consumer
                 while ( ! waiting_consumers_.empty() ) {
                     context * consumer_ctx = & waiting_consumers_.front();
@@ -301,7 +301,7 @@ public:
                 }
             } else {
                 slots_[pidx_] = value;
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 // notify one waiting consumer
                 while ( ! waiting_consumers_.empty() ) {
                     context * consumer_ctx = & waiting_consumers_.front();
@@ -349,7 +349,7 @@ public:
                 }
             } else {
                 slots_[pidx_] = std::move( value);
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 // notify one waiting consumer
                 while ( ! waiting_consumers_.empty() ) {
                     context * consumer_ctx = & waiting_consumers_.front();
@@ -383,7 +383,7 @@ public:
                 : channel_op_status::empty;
         }
         value = std::move( slots_[cidx_]);
-        cidx_ = (cidx_ + 1) % capacity_;
+        cidx_ = (cidx_ + 1) & (capacity_ - 1);
         // notify one waiting producer
         while ( ! waiting_producers_.empty() ) {
             context * producer_ctx = & waiting_producers_.front();
@@ -420,7 +420,7 @@ public:
                 active_ctx->suspend( lk);
             } else {
                 value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 // notify one waiting producer
                 while ( ! waiting_producers_.empty() ) {
                     context * producer_ctx = & waiting_producers_.front();
@@ -461,7 +461,7 @@ public:
                 active_ctx->suspend( lk);
             } else {
                 value_type value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 // notify one waiting producer
                 while ( ! waiting_producers_.empty() ) {
                     context * producer_ctx = & waiting_producers_.front();
@@ -516,7 +516,7 @@ public:
                 }
             } else {
                 value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 // notify one waiting producer
                 while ( ! waiting_producers_.empty() ) {
                     context * producer_ctx = & waiting_producers_.front();
