@@ -50,7 +50,7 @@ private:
     bool                                                closed_{ false };
 
 	bool is_full_() const noexcept {
-		return cidx_ == ((pidx_ + 1) % capacity_);
+		return cidx_ == ((pidx_ + 1) & (capacity_ - 1));
 	}
 
 	bool is_empty_() const noexcept {
@@ -64,7 +64,7 @@ private:
 public:
     explicit buffered_channel( std::size_t capacity) :
             capacity_{ capacity } {
-        if ( BOOST_UNLIKELY( 2 > capacity_ || 0 != ( capacity_ & (capacity_ - 1) ) ) ) { 
+        if ( BOOST_UNLIKELY( 2 > capacity_ || 0 != ( capacity_ & (capacity_ - 1) ) ) ) {
             throw fiber_error{ std::make_error_code( std::errc::invalid_argument),
                                "boost fiber: buffer capacity is invalid" };
         }
@@ -102,7 +102,7 @@ public:
             return channel_op_status::full;
         }
         slots_[pidx_] = value;
-        pidx_ = (pidx_ + 1) % capacity_;
+        pidx_ = (pidx_ + 1) & (capacity_ - 1);
         waiting_consumers_.notify_one();
         return channel_op_status::success;
     }
@@ -116,7 +116,7 @@ public:
             return channel_op_status::full;
         }
         slots_[pidx_] = std::move( value);
-        pidx_ = (pidx_ + 1) % capacity_;
+        pidx_ = (pidx_ + 1) & (capacity_ - 1);
         waiting_consumers_.notify_one();
         return channel_op_status::success;
     }
@@ -132,7 +132,7 @@ public:
                 waiting_producers_.suspend_and_wait( lk, active_ctx);
             } else {
                 slots_[pidx_] = value;
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 waiting_consumers_.notify_one();
                 return channel_op_status::success;
             }
@@ -150,7 +150,7 @@ public:
                 waiting_producers_.suspend_and_wait( lk, active_ctx);
             } else {
                 slots_[pidx_] = std::move( value);
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
 
                 waiting_consumers_.notify_one();
                 return channel_op_status::success;
@@ -188,7 +188,7 @@ public:
                 }
             } else {
                 slots_[pidx_] = value;
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 waiting_consumers_.notify_one();
                 return channel_op_status::success;
             }
@@ -211,7 +211,7 @@ public:
                 }
             } else {
                 slots_[pidx_] = std::move( value);
-                pidx_ = (pidx_ + 1) % capacity_;
+                pidx_ = (pidx_ + 1) & (capacity_ - 1);
                 // notify one waiting consumer
                 waiting_consumers_.notify_one();
                 return channel_op_status::success;
@@ -227,7 +227,7 @@ public:
                 : channel_op_status::empty;
         }
         value = std::move( slots_[cidx_]);
-        cidx_ = (cidx_ + 1) % capacity_;
+        cidx_ = (cidx_ + 1) & (capacity_ - 1);
         waiting_producers_.notify_one();
         return channel_op_status::success;
     }
@@ -243,7 +243,7 @@ public:
                 waiting_consumers_.suspend_and_wait( lk, active_ctx);
             } else {
                 value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 waiting_producers_.notify_one();
                 return channel_op_status::success;
             }
@@ -263,7 +263,7 @@ public:
                 waiting_consumers_.suspend_and_wait( lk, active_ctx);
             } else {
                 value_type value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 waiting_producers_.notify_one();
                 return value;
             }
@@ -293,7 +293,7 @@ public:
                 }
             } else {
                 value = std::move( slots_[cidx_]);
-                cidx_ = (cidx_ + 1) % capacity_;
+                cidx_ = (cidx_ + 1) & (capacity_ - 1);
                 waiting_producers_.notify_one();
                 return channel_op_status::success;
             }
