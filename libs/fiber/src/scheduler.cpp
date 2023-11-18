@@ -22,6 +22,11 @@
 #  include BOOST_ABI_PREFIX
 #endif
 
+#ifdef _MSC_VER
+#  undef BOOST_ALIGN_ASSUME_ALIGNED
+#  define BOOST_ALIGN_ASSUME_ALIGNED(p,n) p
+#endif
+
 namespace boost {
 namespace fibers {
 
