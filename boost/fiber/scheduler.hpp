@@ -128,6 +128,34 @@ public:
 
     void yield( context *) noexcept;
 
+    // this function use context::resume(context ** activepp), thus omit
+    // a tls_get function call for context_initializer::active_
+    inline void yield(context** activepp) noexcept {
+    #if !defined(NDEBUG)
+        BOOST_ASSERT( nullptr != activepp);
+        BOOST_ASSERT( context::active_pp() == activepp);
+        auto ctx = *activepp;
+        BOOST_ASSERT( ctx->is_context( type::worker_context) || ctx->is_context( type::main_context) );
+        BOOST_ASSERT( ! ctx->ready_is_linked() );
+    #if ! defined(BOOST_FIBERS_NO_ATOMICS)
+        BOOST_ASSERT( ! ctx->remote_ready_is_linked() );
+    #endif
+        BOOST_ASSERT( ! ctx->sleep_is_linked() );
+        //BOOST_ASSERT( ! ctx->terminated_is_linked() );
+        //BOOST_ASSERT( ! ctx->wait_is_linked() );
+    #endif
+        algo_->pick_next()->resume(activepp);
+    }
+
+    // this function do omit a tls_get function call for context_initializer::active_
+    inline void suspend(context** activepp) noexcept {
+        BOOST_ASSERT(context::active_pp() == activepp);
+        BOOST_ASSERT(nullptr != activepp);
+        algo_->pick_next()->resume_suspend(activepp);
+    }
+
+    void call_on_main_stack(const std::function<void()>& largeStackFn) noexcept;
+
     bool wait_until( context *,
                      std::chrono::steady_clock::time_point const&) noexcept;
 

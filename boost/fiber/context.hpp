@@ -18,6 +18,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+//#include <utility> // for std::exchange, mac clang sucks
+#include <boost/core/exchange.hpp>
 
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
@@ -145,6 +147,7 @@ private:
     bool                                                terminated_{ false };
     wait_queue                                          wait_queue_{};
 public:
+    using wait_queue_t = wait_queue;
 #if ! defined(BOOST_FIBERS_NO_ATOMICS)
     std::atomic<size_t>                                 waker_epoch_{ 0 };
 #endif
@@ -224,6 +227,7 @@ public:
     };
 
     static context * active() noexcept;
+    static context** active_pp() noexcept;
 
     static void reset_active() noexcept;
 
@@ -233,19 +237,19 @@ public:
     context & operator=( context &&) = delete;
 
     #if !defined(BOOST_EMBTC)
-  
+
     friend bool
     operator==( context const& lhs, context const& rhs) noexcept {
         return & lhs == & rhs;
     }
 
     #else
-  
+
     friend bool
     operator==( context const& lhs, context const& rhs) noexcept;
 
     #endif
-      
+
     virtual ~context();
 
     scheduler * get_scheduler() const noexcept {
@@ -261,6 +265,31 @@ public:
     void resume() noexcept;
     void resume( detail::spinlock_lock &) noexcept;
     void resume( context *) noexcept;
+
+    // resume active context, reduce a tls_get function call for
+    // context_initializer::active_
+    // just called by shedualer::yield(context **)
+    inline void resume(context ** activepp) noexcept {
+        assert(active_pp() == activepp);
+        context* prev = boost::exchange(*activepp, this);
+        std::move(c_).resume_with([this,prev](boost::context::fiber && c) {
+                prev->c_ = std::move( c);
+                this->schedule(prev); // context::active() equals to 'this'
+                return boost::context::fiber{};
+            });
+    }
+
+    // resume 'this' and suspend '*activepp'
+    // reduce tls_get for context_initializer::active_
+    // just called by shedualer::suspend(context **)
+    inline void resume_suspend(context ** activepp) noexcept {
+        assert(active_pp() == activepp);
+        context* prev = boost::exchange(*activepp, this);
+        std::move(c_).resume_with([prev](boost::context::fiber && c) {
+                prev->c_ = std::move( c);
+                return boost::context::fiber{};
+            });
+    }
 
     void suspend() noexcept;
     void suspend( detail::spinlock_lock &) noexcept;
@@ -364,7 +393,7 @@ public:
     void attach( context *) noexcept;
 
     #if !defined(BOOST_EMBTC)
-      
+
     friend void intrusive_ptr_add_ref( context * ctx) noexcept {
         BOOST_ASSERT( nullptr != ctx);
         ctx->use_count_.fetch_add( 1, std::memory_order_relaxed);
@@ -381,14 +410,14 @@ public:
             std::move( c).resume();
         }
     }
-    
+
     #else
-      
+
     friend void intrusive_ptr_add_ref( context * ctx) noexcept;
     friend void intrusive_ptr_release( context * ctx) noexcept;
-    
+
     #endif
-      
+
 };
 
 #if defined(BOOST_EMBTC)
@@ -414,9 +443,9 @@ public:
             std::move( c).resume();
         }
     }
-    
+
 #endif
-    
+
 inline
 bool operator<( context const& l, context const& r) noexcept {
     return l.get_id() < r.get_id();
@@ -494,7 +523,7 @@ static intrusive_ptr< context > make_worker_context_with_properties( launch poli
             reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sctx.size) );
     const std::size_t size = reinterpret_cast< uintptr_t >( storage) - reinterpret_cast< uintptr_t >( stack_bottom);
     // placement new of context on top of fiber's stack
-    return intrusive_ptr< context >{ 
+    return intrusive_ptr< context >{
             new ( storage) context_t{
                 policy,
                 properties,
